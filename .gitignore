@@ -1,0 +1,15 @@
+# Byte-compiled / virtualenv
+.venv/
+__pycache__/
+*.pyc
+
+# Generated data (TPC-DS output; regenerate with scripts/load_tpcds.py)
+data/raw/
+data/warehouse/
+*.duckdb
+*.duckdb.wal
+
+# Spark cruft
+metastore_db/
+spark-warehouse/
+derby.log

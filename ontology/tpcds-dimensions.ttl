@@ -1,0 +1,179 @@
+@prefix :        <https://example.org/ontology/tpcds#> .
+@prefix tpcds:   <https://example.org/ontology/tpcds#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema:  <https://schema.org/> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix time:    <http://www.w3.org/2006/time#> .
+
+#################################################################
+# TPC-DS Dimension Ontology
+#
+# Models the 17 conformed dimensions. Aligns with schema.org for
+# common entities (Person, PostalAddress, Product, Place) and OWL
+# Time for date_dim / time_dim. SCD-type-2 attributes (rec_start_date,
+# rec_end_date) on slowly-changing dimensions are exposed as
+# tpcds:validFrom / tpcds:validTo so any dimension can be versioned.
+#################################################################
+
+<https://example.org/ontology/tpcds/dimensions> a owl:Ontology ;
+    owl:imports <https://example.org/ontology/tpcds> ;
+    dct:title   "TPC-DS Starter Ontology — Dimensions" ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+# SCD-2 validity window (applies to customer, item, store, ...)
+#################################################################
+
+tpcds:validFrom a owl:DatatypeProperty ;
+    rdfs:label "valid from" ;
+    rdfs:range xsd:date .
+
+tpcds:validTo a owl:DatatypeProperty ;
+    rdfs:label "valid to" ;
+    rdfs:range xsd:date .
+
+#################################################################
+# Party dimensions
+#################################################################
+
+tpcds:Customer a owl:Class ;
+    rdfs:subClassOf schema:Person , tpcds:Entity ;
+    rdfs:label   "Customer" ;
+    rdfs:comment "Maps from the `customer` table (c_customer_sk / c_customer_id)." .
+
+tpcds:CustomerDemographic a owl:Class ;
+    rdfs:subClassOf tpcds:Entity ;
+    rdfs:label   "Customer Demographic" ;
+    rdfs:comment "Categorical demographic bucket: gender, marital status, education, credit rating, dependent counts. Maps from `customer_demographics`." .
+
+tpcds:HouseholdDemographic a owl:Class ;
+    rdfs:subClassOf tpcds:Entity ;
+    rdfs:label   "Household Demographic" ;
+    rdfs:comment "Household-level attributes: buy-potential bucket, vehicle count, income band. Maps from `household_demographics`." .
+
+tpcds:IncomeBand a owl:Class ;
+    rdfs:subClassOf tpcds:CodeListConcept ;
+    rdfs:label "Income Band" .
+
+# customer ←→ demographics
+tpcds:hasCustomerDemographic a owl:ObjectProperty ;
+    rdfs:domain tpcds:Customer ; rdfs:range tpcds:CustomerDemographic .
+tpcds:hasHouseholdDemographic a owl:ObjectProperty ;
+    rdfs:domain tpcds:Customer ; rdfs:range tpcds:HouseholdDemographic .
+tpcds:hasIncomeBand a owl:ObjectProperty ;
+    rdfs:domain tpcds:HouseholdDemographic ; rdfs:range tpcds:IncomeBand .
+tpcds:hasCurrentAddress a owl:ObjectProperty ;
+    rdfs:domain tpcds:Customer ; rdfs:range schema:PostalAddress .
+
+#################################################################
+# Location dimensions
+#################################################################
+
+tpcds:Address a owl:Class ;
+    rdfs:subClassOf schema:PostalAddress , tpcds:Entity ;
+    rdfs:label   "Customer Address" ;
+    rdfs:comment "Maps from `customer_address`. Reuses schema:streetAddress / addressLocality / postalCode / addressCountry." .
+
+tpcds:Store a owl:Class ;
+    rdfs:subClassOf schema:Place , tpcds:Entity ;
+    rdfs:label   "Store" ;
+    rdfs:comment "Brick-and-mortar selling location. Maps from `store`." .
+
+tpcds:Warehouse a owl:Class ;
+    rdfs:subClassOf schema:Place , tpcds:Entity ;
+    rdfs:label "Warehouse" ;
+    rdfs:comment "Physical fulfillment location. Maps from `warehouse`." .
+
+tpcds:CallCenter a owl:Class ;
+    rdfs:subClassOf schema:Place , tpcds:Entity ;
+    rdfs:label "Call Center" ;
+    rdfs:comment "Maps from `call_center`." .
+
+tpcds:WebSite a owl:Class ;
+    rdfs:subClassOf schema:WebSite , tpcds:Entity ;
+    rdfs:label "Web Site" .
+
+tpcds:WebPage a owl:Class ;
+    rdfs:subClassOf schema:WebPage , tpcds:Entity ;
+    rdfs:label "Web Page" .
+
+tpcds:CatalogPage a owl:Class ;
+    rdfs:subClassOf tpcds:Entity ;
+    rdfs:label "Catalog Page" ;
+    rdfs:comment "Page within a printed catalog issue. Maps from `catalog_page`." .
+
+#################################################################
+# Product / item
+#################################################################
+
+tpcds:Item a owl:Class ;
+    rdfs:subClassOf schema:Product , tpcds:Entity ;
+    rdfs:label   "Item" ;
+    rdfs:comment "SKU-level product. Maps from `item`. Use schema:brand, schema:category, schema:manufacturer for cross-vocab alignment." .
+
+tpcds:ItemCategory a owl:Class ;
+    rdfs:subClassOf tpcds:CodeListConcept ;
+    rdfs:label "Item Category" .
+
+tpcds:ItemClass a owl:Class ;
+    rdfs:subClassOf tpcds:CodeListConcept ;
+    rdfs:label "Item Class" .
+
+tpcds:hasCategory a owl:ObjectProperty ;
+    rdfs:domain tpcds:Item ; rdfs:range tpcds:ItemCategory .
+tpcds:hasItemClass a owl:ObjectProperty ;
+    rdfs:domain tpcds:Item ; rdfs:range tpcds:ItemClass .
+
+#################################################################
+# Time dimensions — OWL-Time aligned
+#################################################################
+
+tpcds:CalendarDay a owl:Class ;
+    rdfs:subClassOf time:DateTimeDescription , tpcds:Entity ;
+    rdfs:label   "Calendar Day" ;
+    rdfs:comment "Maps from `date_dim` (one row per day). Use time:day / time:month / time:year for canonical access." .
+
+tpcds:TimeOfDay a owl:Class ;
+    rdfs:subClassOf time:DateTimeDescription , tpcds:Entity ;
+    rdfs:label   "Time Of Day" ;
+    rdfs:comment "Second-of-day granularity. Maps from `time_dim`." .
+
+tpcds:isHoliday a owl:DatatypeProperty ;
+    rdfs:domain tpcds:CalendarDay ; rdfs:range xsd:boolean .
+tpcds:isWeekend a owl:DatatypeProperty ;
+    rdfs:domain tpcds:CalendarDay ; rdfs:range xsd:boolean .
+tpcds:fiscalYear a owl:DatatypeProperty ;
+    rdfs:domain tpcds:CalendarDay ; rdfs:range xsd:gYear .
+
+#################################################################
+# Code lists (small lookup dimensions)
+#################################################################
+
+tpcds:Promotion a owl:Class ;
+    rdfs:subClassOf tpcds:Entity ;
+    rdfs:label "Promotion" ;
+    rdfs:comment "Marketing campaign or offer. Maps from `promotion`." .
+
+tpcds:ShipMode a owl:Class ;
+    rdfs:subClassOf tpcds:CodeListConcept ;
+    rdfs:label "Ship Mode" ;
+    rdfs:comment "Maps from `ship_mode`." .
+
+tpcds:ReturnReason a owl:Class ;
+    rdfs:subClassOf tpcds:CodeListConcept ;
+    rdfs:label "Return Reason" ;
+    rdfs:comment "Maps from `reason`." .
+
+#################################################################
+# SKOS concept schemes (anchors for the lookup tables)
+#################################################################
+
+tpcds:ShipModeScheme      a skos:ConceptScheme ; skos:prefLabel "TPC-DS Ship Modes" .
+tpcds:ReturnReasonScheme  a skos:ConceptScheme ; skos:prefLabel "TPC-DS Return Reasons" .
+tpcds:IncomeBandScheme    a skos:ConceptScheme ; skos:prefLabel "TPC-DS Income Bands" .
+tpcds:ItemCategoryScheme  a skos:ConceptScheme ; skos:prefLabel "TPC-DS Item Categories" .
+tpcds:ItemClassScheme     a skos:ConceptScheme ; skos:prefLabel "TPC-DS Item Classes" .

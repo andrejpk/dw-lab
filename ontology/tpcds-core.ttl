@@ -1,0 +1,76 @@
+@prefix :        <https://example.org/ontology/tpcds#> .
+@prefix tpcds:   <https://example.org/ontology/tpcds#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema:  <https://schema.org/> .
+@prefix qb:      <http://purl.org/linked-data/cube#> .
+
+#################################################################
+# TPC-DS Core Ontology
+#
+# Top-level classes, channels, and reusable shared properties.
+# Imports nothing; the dimension/fact files build on this one.
+#################################################################
+
+<https://example.org/ontology/tpcds> a owl:Ontology ;
+    dct:title       "TPC-DS Starter Ontology — Core" ;
+    dct:description "A minimal-but-solid ontology for the TPC-DS retail data warehouse. Models the 3 sales channels (store, catalog, web), parties, items, locations, time, and code lists shared across the dimension and fact modules." ;
+    owl:versionInfo "0.1.0" ;
+    dct:creator     "dw-lab" .
+
+#################################################################
+# Abstract roots
+#################################################################
+
+tpcds:Entity a owl:Class ;
+    rdfs:label   "TPC-DS Entity" ;
+    rdfs:comment "Abstract root for any first-class business entity (party, item, location, ...)." .
+
+tpcds:CodeListConcept a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label    "Code List Concept" ;
+    rdfs:comment  "Abstract root for controlled-vocabulary lookup values (ship modes, reasons, promotions, income bands, ...)." .
+
+#################################################################
+# Sales channel (store / catalog / web)
+#################################################################
+
+tpcds:SalesChannel a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label    "Sales Channel" ;
+    rdfs:comment  "Distribution channel through which a sale or return is transacted." .
+
+tpcds:SalesChannelScheme a skos:ConceptScheme ;
+    skos:prefLabel "TPC-DS Sales Channels" ;
+    skos:hasTopConcept tpcds:StoreChannel , tpcds:CatalogChannel , tpcds:WebChannel .
+
+tpcds:StoreChannel   a tpcds:SalesChannel ; skos:inScheme tpcds:SalesChannelScheme ; skos:prefLabel "Store" .
+tpcds:CatalogChannel a tpcds:SalesChannel ; skos:inScheme tpcds:SalesChannelScheme ; skos:prefLabel "Catalog" .
+tpcds:WebChannel     a tpcds:SalesChannel ; skos:inScheme tpcds:SalesChannelScheme ; skos:prefLabel "Web" .
+
+#################################################################
+# Shared object properties
+#################################################################
+
+tpcds:hasChannel a owl:ObjectProperty ;
+    rdfs:label  "has sales channel" ;
+    rdfs:range  tpcds:SalesChannel .
+
+tpcds:locatedAt a owl:ObjectProperty ;
+    rdfs:label   "located at" ;
+    rdfs:comment "Generic spatial containment (e.g., store → address)." ;
+    rdfs:range   schema:PostalAddress .
+
+tpcds:businessKey a owl:DatatypeProperty ;
+    rdfs:label   "business key" ;
+    rdfs:comment "Stable natural identifier from the source system (e.g., *_id columns ending in _id but excluding surrogate _sk keys)." ;
+    rdfs:range   xsd:string .
+
+tpcds:surrogateKey a owl:DatatypeProperty ;
+    rdfs:label   "surrogate key" ;
+    rdfs:comment "Integer surrogate key as used in the TPC-DS source (the *_sk columns). Useful for lineage but not for cross-system identity." ;
+    rdfs:range   xsd:long .

@@ -1,0 +1,237 @@
+@prefix :        <https://example.org/ontology/tpcds#> .
+@prefix tpcds:   <https://example.org/ontology/tpcds#> .
+@prefix map:     <https://example.org/ontology/tpcds/mapping#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema:  <https://schema.org/> .
+
+#################################################################
+# TPC-DS Mapping Module
+#
+# Lightweight, ETL-agnostic mapping from Parquet tables in
+#   data/raw/tpcds_sf<sf>/<table>.parquet
+# to the TPC-DS ontology classes/properties.
+#
+# Uses a tiny in-house mapping vocab (map:) rather than full RML/R2RML
+# to keep this file human-readable and easy to extend. Each
+# map:TableMapping declares:
+#   - map:sourceTable      — the Parquet file (relative path)
+#   - map:targetClass      — the ontology class instances belong to
+#   - map:iriTemplate      — how to mint stable IRIs per row
+#   - map:propertyMapping  — list of column → ontology-property bindings
+#################################################################
+
+<https://example.org/ontology/tpcds/mapping> a owl:Ontology ;
+    owl:imports <https://example.org/ontology/tpcds/dimensions> ,
+                <https://example.org/ontology/tpcds/facts> ;
+    dct:title   "TPC-DS Starter Ontology — Mappings" ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+# Mapping vocabulary
+#################################################################
+
+map:TableMapping       a owl:Class .
+map:PropertyMapping    a owl:Class .
+map:sourceTable        a owl:DatatypeProperty ; rdfs:range xsd:string .
+map:targetClass        a owl:ObjectProperty .
+map:iriTemplate        a owl:DatatypeProperty ; rdfs:range xsd:string .
+map:propertyMapping    a owl:ObjectProperty   ; rdfs:range map:PropertyMapping .
+map:column             a owl:DatatypeProperty ; rdfs:range xsd:string .
+map:property           a owl:ObjectProperty .
+map:datatype           a owl:ObjectProperty .
+map:refersTo           a owl:ObjectProperty ;
+    rdfs:comment "For foreign-key columns: the target TableMapping whose iriTemplate should be applied to mint the object IRI." .
+
+#################################################################
+# Dimensions
+#################################################################
+
+map:CustomerMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/customer.parquet" ;
+    map:targetClass tpcds:Customer ;
+    map:iriTemplate "https://example.org/id/customer/{c_customer_id}" ;
+    map:propertyMapping
+        [ map:column "c_customer_id"     ; map:property tpcds:businessKey ] ,
+        [ map:column "c_customer_sk"     ; map:property tpcds:surrogateKey ] ,
+        [ map:column "c_first_name"      ; map:property schema:givenName ] ,
+        [ map:column "c_last_name"       ; map:property schema:familyName ] ,
+        [ map:column "c_email_address"   ; map:property schema:email ] ,
+        [ map:column "c_birth_year"      ; map:property schema:birthDate ; map:datatype xsd:gYear ] ,
+        [ map:column "c_current_addr_sk" ; map:property tpcds:hasCurrentAddress ; map:refersTo map:AddressMapping ] ,
+        [ map:column "c_current_cdemo_sk"; map:property tpcds:hasCustomerDemographic ; map:refersTo map:CustomerDemographicMapping ] ,
+        [ map:column "c_current_hdemo_sk"; map:property tpcds:hasHouseholdDemographic ; map:refersTo map:HouseholdDemographicMapping ] .
+
+map:AddressMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/customer_address.parquet" ;
+    map:targetClass tpcds:Address ;
+    map:iriTemplate "https://example.org/id/address/{ca_address_id}" ;
+    map:propertyMapping
+        [ map:column "ca_address_id"     ; map:property tpcds:businessKey ] ,
+        [ map:column "ca_street_number"  ; map:property schema:streetAddress ] ,
+        [ map:column "ca_city"           ; map:property schema:addressLocality ] ,
+        [ map:column "ca_state"          ; map:property schema:addressRegion ] ,
+        [ map:column "ca_zip"            ; map:property schema:postalCode ] ,
+        [ map:column "ca_country"        ; map:property schema:addressCountry ] .
+
+map:ItemMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/item.parquet" ;
+    map:targetClass tpcds:Item ;
+    map:iriTemplate "https://example.org/id/item/{i_item_id}" ;
+    map:propertyMapping
+        [ map:column "i_item_id"        ; map:property tpcds:businessKey ] ,
+        [ map:column "i_item_desc"      ; map:property schema:description ] ,
+        [ map:column "i_brand"          ; map:property schema:brand ] ,
+        [ map:column "i_category"       ; map:property tpcds:hasCategory ] ,
+        [ map:column "i_class"          ; map:property tpcds:hasItemClass ] ,
+        [ map:column "i_manufact"       ; map:property schema:manufacturer ] ,
+        [ map:column "i_current_price"  ; map:property schema:price ] ,
+        [ map:column "i_rec_start_date" ; map:property tpcds:validFrom ] ,
+        [ map:column "i_rec_end_date"   ; map:property tpcds:validTo ] .
+
+map:StoreMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/store.parquet" ;
+    map:targetClass tpcds:Store ;
+    map:iriTemplate "https://example.org/id/store/{s_store_id}" ;
+    map:propertyMapping
+        [ map:column "s_store_id"   ; map:property tpcds:businessKey ] ,
+        [ map:column "s_store_name" ; map:property schema:name ] ,
+        [ map:column "s_city"       ; map:property schema:addressLocality ] ,
+        [ map:column "s_state"      ; map:property schema:addressRegion ] ,
+        [ map:column "s_zip"        ; map:property schema:postalCode ] .
+
+map:DateDimMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/date_dim.parquet" ;
+    map:targetClass tpcds:CalendarDay ;
+    map:iriTemplate "https://example.org/id/day/{d_date}" ;
+    map:propertyMapping
+        [ map:column "d_date_id"   ; map:property tpcds:businessKey ] ,
+        [ map:column "d_holiday"   ; map:property tpcds:isHoliday ] ,
+        [ map:column "d_weekend"   ; map:property tpcds:isWeekend ] ,
+        [ map:column "d_fy_year"   ; map:property tpcds:fiscalYear ] .
+
+#################################################################
+# Facts — example: store_sales
+#
+# Other fact tables follow the same pattern: dimension FK columns
+# become object properties linking to the relevant TableMapping;
+# the ss_*/cs_*/ws_* numeric columns map onto the qb:MeasureProperty
+# instances declared in tpcds-facts.ttl.
+#################################################################
+
+map:StoreSalesMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/store_sales.parquet" ;
+    map:targetClass tpcds:StoreSale ;
+    map:iriTemplate "https://example.org/id/store_sale/{ss_ticket_number}-{ss_item_sk}" ;
+    map:propertyMapping
+        [ map:column "ss_sold_date_sk"  ; map:property tpcds:soldDate     ; map:refersTo map:DateDimMapping ] ,
+        [ map:column "ss_customer_sk"   ; map:property tpcds:customer     ; map:refersTo map:CustomerMapping ] ,
+        [ map:column "ss_item_sk"       ; map:property tpcds:item         ; map:refersTo map:ItemMapping ] ,
+        [ map:column "ss_store_sk"      ; map:property tpcds:store        ; map:refersTo map:StoreMapping ] ,
+        [ map:column "ss_promo_sk"      ; map:property tpcds:promotion ] ,
+        [ map:column "ss_ticket_number" ; map:property tpcds:ticketNumber ] ,
+        [ map:column "ss_quantity"      ; map:property tpcds:quantity ] ,
+        [ map:column "ss_sales_price"   ; map:property tpcds:salesPrice ] ,
+        [ map:column "ss_ext_sales_price"  ; map:property tpcds:extSalesPrice ] ,
+        [ map:column "ss_ext_discount_amt" ; map:property tpcds:extDiscountAmount ] ,
+        [ map:column "ss_ext_tax"          ; map:property tpcds:extTax ] ,
+        [ map:column "ss_coupon_amt"       ; map:property tpcds:couponAmount ] ,
+        [ map:column "ss_net_paid"         ; map:property tpcds:netPaid ] ,
+        [ map:column "ss_net_paid_inc_tax" ; map:property tpcds:netPaidIncTax ] ,
+        [ map:column "ss_net_profit"       ; map:property tpcds:netProfit ] .
+
+#################################################################
+# Stubs — fill in as needed
+#################################################################
+
+map:CustomerDemographicMapping   a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/customer_demographics.parquet" ;
+    map:targetClass tpcds:CustomerDemographic ;
+    map:iriTemplate "https://example.org/id/cdemo/{cd_demo_sk}" .
+
+map:HouseholdDemographicMapping  a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/household_demographics.parquet" ;
+    map:targetClass tpcds:HouseholdDemographic ;
+    map:iriTemplate "https://example.org/id/hdemo/{hd_demo_sk}" .
+
+map:IncomeBandMapping            a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/income_band.parquet" ;
+    map:targetClass tpcds:IncomeBand ;
+    map:iriTemplate "https://example.org/id/income_band/{ib_income_band_sk}" .
+
+map:PromotionMapping             a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/promotion.parquet" ;
+    map:targetClass tpcds:Promotion ;
+    map:iriTemplate "https://example.org/id/promotion/{p_promo_id}" .
+
+map:ShipModeMapping              a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/ship_mode.parquet" ;
+    map:targetClass tpcds:ShipMode ;
+    map:iriTemplate "https://example.org/id/ship_mode/{sm_ship_mode_id}" .
+
+map:ReasonMapping                a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/reason.parquet" ;
+    map:targetClass tpcds:ReturnReason ;
+    map:iriTemplate "https://example.org/id/reason/{r_reason_id}" .
+
+map:WarehouseMapping             a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/warehouse.parquet" ;
+    map:targetClass tpcds:Warehouse ;
+    map:iriTemplate "https://example.org/id/warehouse/{w_warehouse_id}" .
+
+map:CallCenterMapping            a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/call_center.parquet" ;
+    map:targetClass tpcds:CallCenter ;
+    map:iriTemplate "https://example.org/id/call_center/{cc_call_center_id}" .
+
+map:WebSiteMapping               a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/web_site.parquet" ;
+    map:targetClass tpcds:WebSite ;
+    map:iriTemplate "https://example.org/id/web_site/{web_site_id}" .
+
+map:WebPageMapping               a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/web_page.parquet" ;
+    map:targetClass tpcds:WebPage ;
+    map:iriTemplate "https://example.org/id/web_page/{wp_web_page_id}" .
+
+map:CatalogPageMapping           a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/catalog_page.parquet" ;
+    map:targetClass tpcds:CatalogPage ;
+    map:iriTemplate "https://example.org/id/catalog_page/{cp_catalog_page_id}" .
+
+map:TimeDimMapping               a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/time_dim.parquet" ;
+    map:targetClass tpcds:TimeOfDay ;
+    map:iriTemplate "https://example.org/id/time/{t_time_id}" .
+
+map:CatalogSalesMapping   a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/catalog_sales.parquet" ;
+    map:targetClass tpcds:CatalogSale ;
+    map:iriTemplate "https://example.org/id/catalog_sale/{cs_order_number}-{cs_item_sk}" .
+
+map:WebSalesMapping       a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/web_sales.parquet" ;
+    map:targetClass tpcds:WebSale ;
+    map:iriTemplate "https://example.org/id/web_sale/{ws_order_number}-{ws_item_sk}" .
+
+map:StoreReturnsMapping   a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/store_returns.parquet" ;
+    map:targetClass tpcds:StoreReturn ;
+    map:iriTemplate "https://example.org/id/store_return/{sr_ticket_number}-{sr_item_sk}" .
+
+map:CatalogReturnsMapping a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/catalog_returns.parquet" ;
+    map:targetClass tpcds:CatalogReturn ;
+    map:iriTemplate "https://example.org/id/catalog_return/{cr_order_number}-{cr_item_sk}" .
+
+map:WebReturnsMapping     a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/web_returns.parquet" ;
+    map:targetClass tpcds:WebReturn ;
+    map:iriTemplate "https://example.org/id/web_return/{wr_order_number}-{wr_item_sk}" .
+
+map:InventoryMapping      a map:TableMapping ;
+    map:sourceTable "tpcds_sf{sf}/inventory.parquet" ;
+    map:targetClass tpcds:InventorySnapshot ;
+    map:iriTemplate "https://example.org/id/inventory/{inv_date_sk}-{inv_warehouse_sk}-{inv_item_sk}" .

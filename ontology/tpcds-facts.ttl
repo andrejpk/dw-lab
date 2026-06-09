@@ -1,0 +1,190 @@
+@prefix :        <https://example.org/ontology/tpcds#> .
+@prefix tpcds:   <https://example.org/ontology/tpcds#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix qb:      <http://purl.org/linked-data/cube#> .
+@prefix sdmx-attribute: <http://purl.org/linked-data/sdmx/2009/attribute#> .
+@prefix sdmx-measure:   <http://purl.org/linked-data/sdmx/2009/measure#> .
+
+#################################################################
+# TPC-DS Fact Ontology
+#
+# Models the 7 fact tables as RDF Data Cube observations:
+#   - StoreSale, CatalogSale, WebSale            (3 sales facts)
+#   - StoreReturn, CatalogReturn, WebReturn      (3 return facts)
+#   - InventorySnapshot                          (periodic snapshot)
+#
+# Each fact reuses one Data Structure Definition per fact family.
+# Common monetary/quantity measures are declared once and shared
+# across the channel-specific cubes so cross-channel roll-ups are
+# well-defined.
+#################################################################
+
+<https://example.org/ontology/tpcds/facts> a owl:Ontology ;
+    owl:imports <https://example.org/ontology/tpcds> ,
+                <https://example.org/ontology/tpcds/dimensions> ;
+    dct:title   "TPC-DS Starter Ontology — Facts" ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+# Abstract fact roots
+#################################################################
+
+tpcds:Transaction a owl:Class ;
+    rdfs:subClassOf qb:Observation ;
+    rdfs:label "Transaction" ;
+    rdfs:comment "Abstract root for any monetary transaction (sale or return) regardless of channel." .
+
+tpcds:SalesTransaction a owl:Class ;
+    rdfs:subClassOf tpcds:Transaction ;
+    rdfs:label "Sales Transaction" .
+
+tpcds:ReturnTransaction a owl:Class ;
+    rdfs:subClassOf tpcds:Transaction ;
+    rdfs:label "Return Transaction" .
+
+#################################################################
+# Concrete fact classes (one per source fact table)
+#################################################################
+
+tpcds:StoreSale     a owl:Class ; rdfs:subClassOf tpcds:SalesTransaction ;
+    rdfs:label "Store Sale Line"        ; rdfs:comment "Maps from `store_sales` (grain = ticket line)." .
+tpcds:CatalogSale   a owl:Class ; rdfs:subClassOf tpcds:SalesTransaction ;
+    rdfs:label "Catalog Sale Line"      ; rdfs:comment "Maps from `catalog_sales`." .
+tpcds:WebSale       a owl:Class ; rdfs:subClassOf tpcds:SalesTransaction ;
+    rdfs:label "Web Sale Line"          ; rdfs:comment "Maps from `web_sales`." .
+
+tpcds:StoreReturn   a owl:Class ; rdfs:subClassOf tpcds:ReturnTransaction ;
+    rdfs:label "Store Return Line"      ; rdfs:comment "Maps from `store_returns`." .
+tpcds:CatalogReturn a owl:Class ; rdfs:subClassOf tpcds:ReturnTransaction ;
+    rdfs:label "Catalog Return Line"    ; rdfs:comment "Maps from `catalog_returns`." .
+tpcds:WebReturn     a owl:Class ; rdfs:subClassOf tpcds:ReturnTransaction ;
+    rdfs:label "Web Return Line"        ; rdfs:comment "Maps from `web_returns`." .
+
+tpcds:InventorySnapshot a owl:Class ;
+    rdfs:subClassOf qb:Observation ;
+    rdfs:label "Inventory Snapshot" ;
+    rdfs:comment "Periodic-snapshot fact. Maps from `inventory` (warehouse × item × week)." .
+
+#################################################################
+# Dimensions (qb:DimensionProperty) — link facts to dim entities
+#################################################################
+
+tpcds:soldDate       a qb:DimensionProperty ; rdfs:range tpcds:CalendarDay ; rdfs:label "sold date" .
+tpcds:soldTime       a qb:DimensionProperty ; rdfs:range tpcds:TimeOfDay   ; rdfs:label "sold time" .
+tpcds:shipDate       a qb:DimensionProperty ; rdfs:range tpcds:CalendarDay ; rdfs:label "ship date" .
+tpcds:returnedDate   a qb:DimensionProperty ; rdfs:range tpcds:CalendarDay ; rdfs:label "returned date" .
+tpcds:customer       a qb:DimensionProperty ; rdfs:range tpcds:Customer    ; rdfs:label "customer" .
+tpcds:billCustomer   a qb:DimensionProperty ; rdfs:range tpcds:Customer    ; rdfs:label "bill-to customer" .
+tpcds:shipCustomer   a qb:DimensionProperty ; rdfs:range tpcds:Customer    ; rdfs:label "ship-to customer" .
+tpcds:item           a qb:DimensionProperty ; rdfs:range tpcds:Item        ; rdfs:label "item" .
+tpcds:store          a qb:DimensionProperty ; rdfs:range tpcds:Store       ; rdfs:label "store" .
+tpcds:warehouse      a qb:DimensionProperty ; rdfs:range tpcds:Warehouse   ; rdfs:label "warehouse" .
+tpcds:callCenter     a qb:DimensionProperty ; rdfs:range tpcds:CallCenter  ; rdfs:label "call center" .
+tpcds:catalogPage    a qb:DimensionProperty ; rdfs:range tpcds:CatalogPage ; rdfs:label "catalog page" .
+tpcds:webSite        a qb:DimensionProperty ; rdfs:range tpcds:WebSite     ; rdfs:label "web site" .
+tpcds:webPage        a qb:DimensionProperty ; rdfs:range tpcds:WebPage     ; rdfs:label "web page" .
+tpcds:promotion      a qb:DimensionProperty ; rdfs:range tpcds:Promotion   ; rdfs:label "promotion" .
+tpcds:shipMode       a qb:DimensionProperty ; rdfs:range tpcds:ShipMode    ; rdfs:label "ship mode" .
+tpcds:returnReason   a qb:DimensionProperty ; rdfs:range tpcds:ReturnReason; rdfs:label "return reason" .
+
+# Degenerate ticket / order identifiers
+tpcds:ticketNumber a qb:DimensionProperty ; rdfs:range xsd:long ; rdfs:label "ticket number" .
+tpcds:orderNumber  a qb:DimensionProperty ; rdfs:range xsd:long ; rdfs:label "order number" .
+
+#################################################################
+# Measures (qb:MeasureProperty) — monetary amounts use xsd:decimal
+#################################################################
+
+tpcds:quantity            a qb:MeasureProperty ; rdfs:range xsd:integer ; rdfs:label "quantity"            ; rdfs:subPropertyOf sdmx-measure:obsValue .
+tpcds:listPrice           a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "list price" .
+tpcds:salesPrice          a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "sales price" .
+tpcds:wholesaleCost       a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "wholesale cost" .
+tpcds:extDiscountAmount   a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext discount amount" .
+tpcds:extSalesPrice       a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext sales price" .
+tpcds:extWholesaleCost    a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext wholesale cost" .
+tpcds:extListPrice        a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext list price" .
+tpcds:extTax              a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext tax" .
+tpcds:couponAmount        a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "coupon amount" .
+tpcds:extShipCost         a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "ext ship cost" .
+tpcds:netPaid             a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net paid" .
+tpcds:netPaidIncTax       a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net paid incl. tax" .
+tpcds:netPaidIncShip      a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net paid incl. ship" .
+tpcds:netPaidIncShipTax   a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net paid incl. ship + tax" .
+tpcds:netProfit           a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net profit" .
+
+# Returns-specific measures
+tpcds:returnQuantity      a qb:MeasureProperty ; rdfs:range xsd:integer ; rdfs:label "return quantity" .
+tpcds:returnAmount        a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "return amount" .
+tpcds:returnTax           a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "return tax" .
+tpcds:returnFee           a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "return fee" .
+tpcds:returnShipCost      a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "return ship cost" .
+tpcds:returnRefundedCash  a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "refunded cash" .
+tpcds:returnReversedCharge a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "reversed charge" .
+tpcds:returnStoreCredit   a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "store credit" .
+tpcds:returnNetLoss       a qb:MeasureProperty ; rdfs:range xsd:decimal ; rdfs:label "net loss" .
+
+# Inventory measure
+tpcds:quantityOnHand      a qb:MeasureProperty ; rdfs:range xsd:integer ; rdfs:label "quantity on hand" .
+
+#################################################################
+# Data Structure Definitions (one per fact family)
+#################################################################
+
+tpcds:SalesDSD a qb:DataStructureDefinition ;
+    rdfs:label "Sales DSD (store / catalog / web)" ;
+    qb:component
+        [ qb:dimension tpcds:soldDate ;     qb:order 1 ] ,
+        [ qb:dimension tpcds:soldTime ;     qb:order 2 ] ,
+        [ qb:dimension tpcds:customer ;     qb:order 3 ] ,
+        [ qb:dimension tpcds:item ;         qb:order 4 ] ,
+        [ qb:dimension tpcds:promotion ;    qb:order 5 ] ,
+        [ qb:dimension tpcds:ticketNumber ; qb:order 6 ] ,
+        [ qb:dimension tpcds:hasChannel ;   qb:order 7 ] ,
+        [ qb:measure tpcds:quantity ] ,
+        [ qb:measure tpcds:salesPrice ] ,
+        [ qb:measure tpcds:extSalesPrice ] ,
+        [ qb:measure tpcds:extDiscountAmount ] ,
+        [ qb:measure tpcds:extTax ] ,
+        [ qb:measure tpcds:couponAmount ] ,
+        [ qb:measure tpcds:netPaid ] ,
+        [ qb:measure tpcds:netPaidIncTax ] ,
+        [ qb:measure tpcds:netProfit ] ,
+        [ qb:attribute sdmx-attribute:unitMeasure ] .
+
+tpcds:ReturnsDSD a qb:DataStructureDefinition ;
+    rdfs:label "Returns DSD (store / catalog / web)" ;
+    qb:component
+        [ qb:dimension tpcds:returnedDate ] ,
+        [ qb:dimension tpcds:customer ] ,
+        [ qb:dimension tpcds:item ] ,
+        [ qb:dimension tpcds:returnReason ] ,
+        [ qb:dimension tpcds:ticketNumber ] ,
+        [ qb:dimension tpcds:hasChannel ] ,
+        [ qb:measure tpcds:returnQuantity ] ,
+        [ qb:measure tpcds:returnAmount ] ,
+        [ qb:measure tpcds:returnTax ] ,
+        [ qb:measure tpcds:returnFee ] ,
+        [ qb:measure tpcds:returnNetLoss ] .
+
+tpcds:InventoryDSD a qb:DataStructureDefinition ;
+    rdfs:label "Inventory DSD" ;
+    qb:component
+        [ qb:dimension tpcds:soldDate ] ,
+        [ qb:dimension tpcds:item ] ,
+        [ qb:dimension tpcds:warehouse ] ,
+        [ qb:measure tpcds:quantityOnHand ] .
+
+#################################################################
+# Datasets (one per concrete fact table)
+#################################################################
+
+tpcds:StoreSalesDataset     a qb:DataSet ; qb:structure tpcds:SalesDSD     ; rdfs:label "Store Sales"     ; tpcds:hasChannel tpcds:StoreChannel .
+tpcds:CatalogSalesDataset   a qb:DataSet ; qb:structure tpcds:SalesDSD     ; rdfs:label "Catalog Sales"   ; tpcds:hasChannel tpcds:CatalogChannel .
+tpcds:WebSalesDataset       a qb:DataSet ; qb:structure tpcds:SalesDSD     ; rdfs:label "Web Sales"       ; tpcds:hasChannel tpcds:WebChannel .
+tpcds:StoreReturnsDataset   a qb:DataSet ; qb:structure tpcds:ReturnsDSD   ; rdfs:label "Store Returns"   ; tpcds:hasChannel tpcds:StoreChannel .
+tpcds:CatalogReturnsDataset a qb:DataSet ; qb:structure tpcds:ReturnsDSD   ; rdfs:label "Catalog Returns" ; tpcds:hasChannel tpcds:CatalogChannel .
+tpcds:WebReturnsDataset     a qb:DataSet ; qb:structure tpcds:ReturnsDSD   ; rdfs:label "Web Returns"     ; tpcds:hasChannel tpcds:WebChannel .
+tpcds:InventoryDataset      a qb:DataSet ; qb:structure tpcds:InventoryDSD ; rdfs:label "Inventory Snapshots" .
