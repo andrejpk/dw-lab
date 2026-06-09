@@ -9,6 +9,8 @@ dw-lab/
 ├── data/
 │   ├── raw/            # generated TPC-DS parquet (gitignored)
 │   └── warehouse/      # persistent duckdb files (gitignored)
+├── docs/
+│   └── schema.md       # loaded TPC-DS table schema
 ├── notebooks/          # jupyter scratch
 ├── scripts/
 │   ├── load_tpcds.py   # generate + export TPC-DS at any scale factor
@@ -39,6 +41,9 @@ python scripts/load_tpcds.py --sf 0.01    # tiny (~10 MB) for quick loops
 Output:
 - `data/raw/tpcds_sf0.1/<table>.parquet` — 24 tables, ZSTD-compressed
 - `data/warehouse/tpcds.duckdb`           — same tables persisted in DuckDB
+
+See [`docs/schema.md`](docs/schema.md) for the table inventory, row counts
+from the default load, and column definitions.
 
 ## Verify
 
