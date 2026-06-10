@@ -1,4 +1,5 @@
 duckdb>=1.1.0
+github-copilot-sdk>=1.0.0
 pyarrow>=17.0.0
 pandas>=2.2.0
 pyspark>=4.0.0

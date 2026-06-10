@@ -51,6 +51,23 @@ from the default load, and column definitions.
 python scripts/verify_tpcds.py --sf 0.1
 ```
 
+## Ask questions with NL2SQL
+
+After loading the warehouse, start the simple Copilot SDK-powered NL2SQL CLI:
+
+```powershell
+python scripts/nl2sql.py
+```
+
+Or ask one question and exit:
+
+```powershell
+python scripts/nl2sql.py --question "What are the top 10 item categories by store sales revenue?"
+```
+
+The CLI asks Copilot to generate a single read-only DuckDB query, executes it
+against `data/warehouse/tpcds.duckdb`, and prints the SQL plus the answer.
+
 ## Why DuckDB for generation?
 
 DuckDB ships an in-process `tpcds` extension (`CALL dsdgen(sf=...)`)
